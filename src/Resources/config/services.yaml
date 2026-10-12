@@ -1,0 +1,18 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    Wexample\SymfonyRemotePeppol\Service\AccessPointRegistry:
+        public: true
+        arguments:
+            $providers: !tagged_iterator wexample_symfony_remote_peppol.provider
+            $sender: '%wexample_symfony_remote_peppol.sender%'
+
+    Wexample\SymfonyRemotePeppol\Service\InboxCollector: ~
+
+    Wexample\SymfonyRemotePeppol\Controller\PeppolWebhookController:
+        tags: ['controller.service_arguments']
+
+    Wexample\SymfonyRemotePeppol\Command\PeppolCollectCommand: ~
