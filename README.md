@@ -1,78 +1,39 @@
 # symfony-remote-peppol
 
-Version: 2.0.3
+Version: 2.0.4
 
-```php
-$sender = $accessPointRegistry->findSender();          // null: the application sends nothing through Peppol
-$receiver = PeppolParticipant::fromString('0208:0417497106');
-
-if ($accessPointRegistry->findDirectory()?->findDocumentTypes($receiver)) {
-    $transmission = $sender->send(PeppolDocument::billing($ourParticipant, $receiver, $ubl));
-    $transmission->reference;                           // keep it: news about it comes under it
-}
-```
-
-News arrives as events, from the webhook route (`/_peppol/webhook/{provider}`) or from `peppol:collect`:
-
-- `TransmissionUpdatedEvent`: a sent document was delivered, or failed;
-- `DocumentReceivedEvent`: a document arrived. A listener that cannot handle it throws: collected, the document stays in the inbox; posted, the webhook answers 500 and the access point posts again.
-
-What to do with a document is the application's, or the package owning it: `symfony-accounting` turns received invoices into purchase drafts.
+Peppol e-delivery through an access point: participants, documents, transmissions, inbox and webhooks, whatever the provider
 
 ## Table of Contents
 
-- [Integration in the Suite](#integration-in-the-suite)
-- [Dependencies](#dependencies)
-- [Versioning & Compatibility Policy](#versioning--compatibility-policy)
-- [License](#license)
-- [About us](#about-us)
-- [Migration Notes](#migration-notes)
+- [Installation](#installation)
+- [Introduction](#introduction)
 
-## Integration in the Suite
+## Installation
 
-This package is part of the Wexample Suite — a collection of high-quality, modular tools designed to work seamlessly together across multiple languages and environments.
+```php
+// config/bundles.php
+Wexample\SymfonyRemotePeppol\WexampleSymfonyRemotePeppolBundle::class => ['all' => true],
+// and one provider package
+```
 
-### Related Packages
+```yaml
+# config/routes/wexample_symfony_remote_peppol.yaml — the webhook route, /_peppol/webhook/{provider}
+wexample_symfony_remote_peppol:
+  resource: '@WexampleSymfonyRemotePeppolBundle/Resources/config/routes.yaml'
 
-The suite includes packages for configuration management, file handling, prompts, and more. Each package can be used independently or as part of the integrated suite.
+# config/packages/wexample_symfony_remote_peppol.yaml — only with several access points
+wexample_symfony_remote_peppol:
+  sender: 'my_provider'
+```
 
-## Dependencies
+An access point that keeps received documents (`InboxInterface`) is collected by `bin/console peppol:collect`, to schedule.
 
-- php: >=8.5
-- wexample/symfony-helpers: >=18.0.0
-- symfony/console: ^7.4 || ^8.0
-- symfony/event-dispatcher: ^7.4 || ^8.0
-- symfony/routing: ^7.4 || ^8.0
-- symfony/http-foundation: ^7.4 || ^8.0
+`symfony-remote-peppol` carries business documents over Peppol, the European e-delivery network, through an access point, whatever the provider. It holds the vocabulary and the plumbing; each provider comes in a package of its own (`symfony-remote-peppol-<provider>`), as payment providers do beside `symfony-remote-payment`.
 
-## Versioning & Compatibility Policy
+- `PeppolParticipant` is an address on the network: `0208:0123456749` (Belgian enterprise number), `0009:<SIRET>`, `9925:BE…` (Belgian VAT number).
+- `PeppolDocument` is what is sent: sender, receiver, document type and process, XML. `PeppolDocument::billing()` types a Peppol BIS Billing 3.0 invoice or credit note.
+- `PeppolTransmission` tells where a sent document stands: `queued`, `delivered`, `failed`.
+- `ReceivedDocument` is a document that reached us.
 
-Wexample packages follow **Semantic Versioning** (SemVer):
-
-- **MAJOR**: Breaking changes
-- **MINOR**: New features, backward compatible
-- **PATCH**: Bug fixes, backward compatible
-
-We maintain backward compatibility within major versions and provide clear migration guides for breaking changes.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-Free to use in both personal and commercial projects.
-
-## About us
-
-[Wexample](https://wexample.com) stands as a cornerstone of the digital ecosystem — a collective of seasoned engineers, researchers, and creators driven by a relentless pursuit of technological excellence. More than a media platform, it has grown into a vibrant community where innovation meets craftsmanship, and where every line of code reflects a commitment to clarity, durability, and shared intelligence.
-
-This packages suite embodies this spirit. Trusted by professionals and enthusiasts alike, it delivers a consistent, high-quality foundation for modern development — open, elegant, and battle-tested. Its reputation is built on years of collaboration, refinement, and rigorous attention to detail, making it a natural choice for those who demand both robustness and beauty in their tools.
-
-Wexample cultivates a culture of mastery. Each package, each contribution carries the mark of a community that values precision, ethics, and innovation — a community proud to shape the future of digital craftsmanship.
-
-Built and maintained by [Romain Weeger](https://weeger.io).
-
-## Migration Notes
-
-When upgrading between major versions, refer to the migration guides in the documentation.
-
-Breaking changes are clearly documented with upgrade paths and examples.
+An access point offers capabilities, each an interface: `SenderInterface` (send, track), `InboxInterface` (fetch, acknowledge), `WebhookParserInterface` (its news, signed), `DirectoryInterface` (who is on Peppol, accepting what). `FakeAccessPoint` offers them all, in memory, for tests and demos.
