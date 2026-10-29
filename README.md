@@ -1,6 +1,6 @@
 # symfony-remote-peppol
 
-Version: 2.0.5
+Version: 2.0.6
 
 Peppol e-delivery through an access point: participants, documents, transmissions, inbox and webhooks, whatever the provider
 
